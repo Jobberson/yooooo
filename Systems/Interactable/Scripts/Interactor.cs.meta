@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: a3068ad890099fd4289d2c9c39990f23
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 303971
+  packageName: Interaction System - Effortless Integration
+  packageVersion: 1.0
+  assetPath: Assets/Interactable/Scripts/Interactor.cs
+  uploadId: 720539
