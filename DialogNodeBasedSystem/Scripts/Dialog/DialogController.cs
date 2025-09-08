@@ -7,11 +7,12 @@ using UnityEngine;
 public class DialogController : MonoBehaviour
 {
     [Header("References")]
-    public DialogBehaviour dialogBehaviour; // assign in inspector (the DialogBehaviour component)
-    public AudioSource audioSource;
-    public GameObject radioUI; // UI canvas/panel that appears when radio is used
-    public Transform playerTransform;
-    public PlayerMovement playerMovement; // script you use to disable player input
+    [SerializeField] private DialogBehaviour dialogBehaviour; // assign in inspector (the DialogBehaviour component)
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private GameObject radioUI; // UI canvas/panel that appears when radio is used
+    [SerializeField] private Transform playerTransform;
+    [SerializeField] private PlayerCharacter playerCharacter; // script you use to disable player input
+    [SerializeField] private PlayerCamera playerCamera;
 
     [Header("Audio Clips")]
     public AudioClips[] audioClips;
@@ -81,13 +82,20 @@ public class DialogController : MonoBehaviour
 
     private IEnumerator LockPlayerCoroutine()
     {
-        playerMovement?.enabled = false;
+        playerCharacter.canMove = false;
+        playerCharacter.canCrouch = false;
+        playerCamera.canLook = false;
+
+        // use Quaternion.Slerp instead of lookat to make the player look at the radio
+        // Add a flag to return to the original rotation after looking.
         yield break;
     }
 
     private IEnumerator UnlockPlayerCoroutine()
     {
-        playerMovement?.enabled = true;
+        playerCharacter.canMove = true;
+        playerCharacter.canCrouch = true;
+        playerCamera.canLook = true;
         yield break;
     }
 

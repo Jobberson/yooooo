@@ -2,6 +2,20 @@
 // Audio Manager
 //==============================================================
 
+
+/*
+
+To make it studio-grade, consider:
+
+Mixer integration
+Object pooling
+Snapshot transitions
+Event-driven triggers
+Save/load settings
+
+*/
+
+
 using UnityEngine;
 using System.Collections;
 public class AudioManager : MonoBehaviour
