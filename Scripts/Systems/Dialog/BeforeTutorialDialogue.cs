@@ -2,6 +2,14 @@ using UnityEngine;
 using AwesomeAttributes;
 using System.Collections.Generic;
 using System.Collections;
+using TMPro;
+
+[System.Serializable]
+public class DialogueLines
+{
+    public string dialogLine;
+    public AudioClip dialogAudioLine;
+}
 
 public class BeforeTutorialDialogue : MonoBehaviour
 {
@@ -9,22 +17,22 @@ public class BeforeTutorialDialogue : MonoBehaviour
     /// This script is here to play the dialogue when the player enters the station after turning the generator on
     /// </summary>
 
-    [SerializeField] private List<string> dialogueLines = new();
-    [SerializeField, MinMaxSlider(3f, 15f)] private Vector2 minMaxBetweenLines = new(6f, 10f);
+    [SerializeField] private List<DialogLines> dialogueLines = new();
+    [SerializeField, MinMaxSlider(3f, 15f)] private Vector2 minMaxBetweenLines = new(6f, 13f);
+    [SerializeField] private AudioSource radioAudioSource;
+    [SerializeField] private TextMeshProUGUI subtitleText;
+    [SerializeField] private RadioFlashingLight radioFlashingLight;
+
     private Coroutine dialogueRoutine;
     private float secBetweenLines;
     private bool hasPlayed = false;
-
-    private void Start()
-    {
-        secBetweenLines = Random.Range(minMaxBetweenLines.x, minMaxBetweenLines.y);
-    }
 
     public void StartPreTutorialDialogue()
     {
         // Only start if not already running
         if (hasPlayed || !StoryManager.Instance.IsAtState(StoryState.afterGenerator)) return;
         dialogueRoutine ??= StartCoroutine(PlayPreTutorialDialogue());
+        radioFlashingLight.radioLight.SetActive(true)
     }
 
     public void StopPreTutorialDialogue()
@@ -33,7 +41,9 @@ public class BeforeTutorialDialogue : MonoBehaviour
         // {
             StopCoroutine(dialogueRoutine);
             dialogueRoutine = null;
+            radioFlashingLight.radioLight.SetActive(false)
             Debug.Log("Pre-tutorial dialogue stopped.");
+            gameobject.SetActive(false);
         // }
     }
 
@@ -45,13 +55,19 @@ public class BeforeTutorialDialogue : MonoBehaviour
         for (int i = 0; i < dialogueLines.Count; i++)
         {
             // Play line
-            // audioSource.clip = dialogueLines[i];
-            // audioSource.Play();
+            radioAudioSource.clip = dialogueLines[i];
+            subtitleText.text = dialogueLines[i].dialogLine;
+            radioAudioSource.Play();
 
-            // Wait until line finishes + delay
-            // audioSource.clip.length + 
-            yield return new WaitForSeconds(secBetweenLines);
+            // Waits audio length + half a second
+            yield return new WaitForSeconds(radioAudioSource.clip.length + 0.5f);
+
+            // clears subtitle
+            subtitleText.text = "";
+
+            // randomizes the amount of seconds to wait until next line
             secBetweenLines = Random.Range(minMaxBetweenLines.x, minMaxBetweenLines.y);
+            yield return new WaitForSeconds(secBetweenLines);
         }
 
         dialogueRoutine = null; // Reset
