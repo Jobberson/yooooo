@@ -1,0 +1,17 @@
+{
+    "name": "Snog.Audio",
+    "rootNamespace": "",
+    "references": [
+        "GUID:b9d00ddecff8b5e49ab5846070288519",
+        "GUID:e65ed5613fef6494a967a669df7ed917"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

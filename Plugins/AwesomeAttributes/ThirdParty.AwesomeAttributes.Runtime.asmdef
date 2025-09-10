@@ -1,0 +1,16 @@
+{
+    "name": "ThirdParty.AwesomeAttributes.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:e65ed5613fef6494a967a669df7ed917"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
