@@ -17,23 +17,17 @@ namespace cherrydev
         [SerializeField] private PlayerCamera playerCamera;
 
         [Header("Dialog Lines Audio Clips")]
-        public AudioClip[] audioClips;
-
+        private Dictionary<string, AudioClip> clipDictionary = new();
+ 
         private void Awake()
         {
-            if (dialogBehaviour == null)
-                Debug.LogError("DialogBehaviour reference required");
+            if (dialogBehaviour == null || playerCharacter == null || playerCamera == null || radioUI == null)
+                Debug.LogError("DialogController is missing required references.");
 
-            audioSource =
-            audioSource != null ? audioSource : GetComponent<AudioSource>();
+            if (!TryGetComponent(out audioSource))
+                Debug.LogError("Missing AudioSource component on DialogController.");
 
-            for (int i = 0; i < audioClips.Length; i++)
-            {
-                var clip = audioClips[i];
-                string key = "Play_" + clip.name; // dialog nodes will use this exact string
-
-                dialogBehaviour.BindExternalFunction(key, () => PlayClipCoroutine(clip, loop: false));
-            }
+            InitDialogueLines();
 
             // Bind simple external functions
             dialogBehaviour.BindExternalFunction("ToggleRadioUI", ToggleRadioUI);
@@ -89,8 +83,6 @@ namespace cherrydev
             playerCharacter.canCrouch = false;
             playerCamera.canLook = false;
 
-            // use Quaternion.Slerp instead of lookat to make the player look at the radio
-            // Add a flag to return to the original rotation after looking.
             yield break;
         }
 
@@ -106,6 +98,19 @@ namespace cherrydev
         {
             // clean up or close UI when dialog ends
             radioUI?.SetActive(false);
+        }
+
+        private void InitDialogueLines()
+        {
+            foreach (var clip in audioClips)
+            {
+                if (clip == null) continue;
+
+                string key = "Play_" + clip.name;
+                clipDictionary[key] = clip;
+
+                dialogBehaviour.BindExternalFunction(key, () => PlayClipCoroutine(clip, loop: false));
+            }
         }
     }
 }

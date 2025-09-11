@@ -11,6 +11,24 @@ public class InteractionsManager : MonoBehaviour, IInteractable
     [SerializeField] private KeyCode interactionKey = KeyCode.E;
     [SerializeField] private KeyCode alternateInteractionKey = KeyCode.Mouse0;
     [SerializeField, TagSelector, Tooltip("This is the tag this object in specific will have for the interaction to work")] private string interactibleTag;
+    private DialogController dialogController;
+    [SerializeField] private List<DialogStateMapping> radioDialogMappings;
+
+    private void Awake() 
+    {
+        dialogController = FindAnyObjectByType<DialogController>();
+    }
+
+    private DialogNodeGraph GetDialogForState(StoryState state)
+    {
+        foreach (var mapping in radioDialogMappings)
+        {
+            if (mapping.storyState == state)
+                return mapping.dialogGraph;
+        }
+        return null;
+    }
+
     public void Interact()
     {
         if (Input.GetKeyDown(interactionKey) || Input.GetKeyDown(alternateInteractionKey))
@@ -18,17 +36,19 @@ public class InteractionsManager : MonoBehaviour, IInteractable
             switch (interactibleTag)
             {
                 case "Radio":
-                    // put a LookAt here to face the radio while the dialogue is playing
-                    // will need to make sure that the player can't move while the dialogue is playing
-                    // and that can click the answer buttons
+                    // this is to take the dialogue for that state
+                    var graph = GetDialogForState(StoryManager.Instance.CurrentState);
+                    if (graph != null)
+                        dialogController.StartRadioDialog(graph);
+                    else
+                        Debug.LogWarning("No dialog graph found for current story state.");
 
+                    // this is to change states or stuff like that
                     switch (StoryManager.Instance.CurrentState)
                     {
                         case StoryState.afterGenerator:
                             Debug.Log("Radio interaction at afterGenerator state");
                             FindAnyObjectByType<BeforeTutorialDialogue>().StopPreTutorialDialogue();
-                            // it should start the introduction dialogue here
-                            // that sets up for the heater task
                             StoryManager.Instance.AdvanceToState(StoryState.waitingForHeater);
                             break;
                         case StoryState.waitingForHeater:
@@ -50,8 +70,8 @@ public class InteractionsManager : MonoBehaviour, IInteractable
                             Debug.Log("No dialogue for this state");
                             break;
                     }
-
                     break;
+                    
                 case "Generator":
                     Debug.Log("Generator interaction");
                     if (StoryManager.Instance.IsAtState(StoryState.beforeGenerator))
@@ -116,7 +136,7 @@ public class InteractionsManager : MonoBehaviour, IInteractable
             case "FuseBox":
             case "Door":
             case "Locker":
-                InteractionText.instance.SetText("Press " + interactionKey + " to open");
+                InteractionText.instance.SetText("Press " + interactionKey + " to open"); // or close
                 break;
 
             // TO VIEW
@@ -126,7 +146,7 @@ public class InteractionsManager : MonoBehaviour, IInteractable
 
             // TO PICKUP
             case "Toolbox":
-                InteractionText.instance.SetText("Press " + interactionKey + " to pick up");
+                InteractionText.instance.SetText("Press " + interactionKey + " to pickup");
                 break;
 
             // TO EQUIP
@@ -143,8 +163,11 @@ public class InteractionsManager : MonoBehaviour, IInteractable
             case "Bed":
                 InteractionText.instance.SetText("Press " + interactionKey + " to sleep");
                 break;
+
+            default:
+                InteractionText.instance.SetText("Press " + interactionKey + " to interact");
+                break;
         }
-        InteractionText.instance.SetText("Press " + interactionKey + " to interact");
     }
 
 
