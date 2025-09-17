@@ -6,6 +6,11 @@ public class PlayerInventory : MonoBehaviour
     private GameObject heldItem;
     public bool IsHoldingItem => heldItem != null;
 
+    private void Start()
+    {
+        playerInventory.LoadInventoryState();
+    }
+
     public void PickUp(GameObject item)
     {
         if (heldItem != null)
@@ -50,4 +55,17 @@ public class PlayerInventory : MonoBehaviour
     }
 
     public GameObject GetHeldItem() => heldItem;
+
+#region Save/Load
+    public void SaveInventoryState() => SaveManager.Instance.SaveHeldItem(heldItem);
+    
+    public void LoadInventoryState()
+    {
+        GameObject itemToHold = SaveManager.Instance.LoadHeldItem();
+        if (itemToHold != null)
+        {
+            PickUp(itemToHold);
+        }
+    }
+#endregion
 }
