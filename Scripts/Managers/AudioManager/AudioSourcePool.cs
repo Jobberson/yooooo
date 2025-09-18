@@ -42,6 +42,16 @@ public class AudioSourcePool : MonoBehaviour
         Pool.Enqueue(source);
     }
 
+    public int GetActiveSourceCount()
+    {
+        int count = 0;
+        foreach (var source in sources)
+        {
+            if (source.isPlaying) count++;
+        }
+        return count;
+    }
+
     private void Singleton()
     {
         if (Instance != null && Instance != this)

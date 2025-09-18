@@ -24,4 +24,10 @@ public class SoundLibrary : MonoBehaviour
 
 		return null;
 	}
+
+	public string[] GetAllClipNames()
+	{
+		return soundDict.Keys.ToArray(); // Assuming you're using a Dictionary<string, AudioClip>
+	}
+
 }

@@ -26,4 +26,9 @@ public class MusicLibrary : MonoBehaviour
         }
         return null;
     }
+
+    public string[] GetAllClipNames()
+    {
+        return clips.Select(c => c.name).ToArray(); // Assuming you have List<AudioClip> clips
+    }
 }

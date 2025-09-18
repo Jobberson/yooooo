@@ -26,4 +26,9 @@ public class AmbientLibrary : MonoBehaviour
         }
         return null;
     }
+
+    public string[] GetAllClipNames()
+    {
+        return clips.Select(c => c.name).ToArray(); // Assuming you have List<AudioClip> clips
+    }
 }

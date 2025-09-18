@@ -8,6 +8,7 @@ using UnityEngine.Audio;
 [RequireComponent(typeof(AmbientLibrary))]
 public class AudioManager : MonoBehaviour
 {
+#region Variables
 	public static AudioManager Instance;
 	public enum AudioChannel 
 	{ 
@@ -16,6 +17,13 @@ public class AudioManager : MonoBehaviour
 		Ambient, 
 		fx 
 	};
+	public enum SnapshotType 
+	{ 
+		Default, 
+		Combat, 
+		Stealth, 
+		Underwater 
+	}
 
 	[Title("Volume", null, true, true)]
 	[SerializeField, Range(0,1)] private float masterVolume = 1; // Overall volume
@@ -28,10 +36,10 @@ public class AudioManager : MonoBehaviour
 	[SerializeField] private bool AmbientIsLooping = true;
 
 	[Title("Mixers", "Objects", true, true)]
-	[SerializeField] private AudioMixer mainMixer;
-	[SerializeField] private AudioMixerGroup musicGroup;
-	[SerializeField] private AudioMixerGroup ambientGroup;
-	[SerializeField] private AudioMixerGroup fxGroup;
+	[SerializeField, Required] private AudioMixer mainMixer;
+	[SerializeField, Required] private AudioMixerGroup musicGroup;
+	[SerializeField, Required] private AudioMixerGroup ambientGroup;
+	[SerializeField, Required] private AudioMixerGroup fxGroup;
 
 	[Title(null, "Snapshots", true, true)]
 	[SerializeField] private AudioMixerSnapshot defaultSnapshot;
@@ -40,7 +48,7 @@ public class AudioManager : MonoBehaviour
 	[SerializeField] private AudioMixerSnapshot underwaterSnapshot;
 
 	[Title("SFX Pool", null, true, true)]
-	[SerializeField] private AudioSourcePool fxPool;
+	[SerializeField, Required] private AudioSourcePool fxPool;
 	[SerializeField] private int poolSize = 10;
 
 	// Seperate audiosources
@@ -52,45 +60,37 @@ public class AudioManager : MonoBehaviour
 	private SoundLibrary soundLibrary;
 	private MusicLibrary musicLibrary;
 	private AmbientLibrary ambientLibrary;
+#endregion
 
+#region Unity Methods
 	private void Awake()
 	{
 		if (Instance == null) Instance = this;
 		else if (Instance != this) Destroy(gameObject);
-
-		DontDestroyOnLoad(gameObject); // Optional
+		DontDestroyOnLoad(gameObject);
 
 		// Get FX, Music and Ambient sound library
 		soundLibrary = GetComponent<SoundLibrary>();
 		musicLibrary = GetComponent<MusicLibrary>();
 		ambientLibrary = GetComponent<AmbientLibrary>();
 
+		// Create audio sources
+		CreateAudioSources();
+
 		// Get FX, Music and Ambient sound mixer groups
 		fxSource.outputAudioMixerGroup = fxGroup;
 		musicSource.outputAudioMixerGroup = musicGroup;
 		ambientSource.outputAudioMixerGroup = ambientGroup;
 
-		// Create audio sources
-		CreateAudioSources();
-
 		// Set volume on all the channels
 		SetChannelVolumes();
 
-		// Initialize pool
+		// Initialize 3D SFX pool
 		InitFXPool();
 	}
+#endregion
 
-	private void InitFXPool()
-	{
-		if (fxPool != null) return;
-		
-		GameObject poolObj = new("FX Pool");
-		poolObj.transform.parent = transform;
-		fxPool = poolObj.AddComponent<AudioSourcePool>();
-		fxPool.fxGroup = fxGroup;
-		fxPool.poolSize = poolSize;
-	}
-
+#region Volume Controls
 	private void SetChannelVolumes()
 	{
 		SetVolume(masterVolume, AudioChannel.Master);
@@ -99,7 +99,6 @@ public class AudioManager : MonoBehaviour
 		SetVolume(ambientVolume, AudioChannel.Ambient);
 	}
 
-	// Set volume on all the channels
 	public void SetVolume(float volumePercent, AudioChannel channel) 
 	{
 		float volumeDB = Mathf.Log10(Mathf.Clamp(volumePercent, 0.0001f, 1f)) * 20;
@@ -120,11 +119,18 @@ public class AudioManager : MonoBehaviour
 				break;
 		}
 	}
+#endregion
 
+#region Music controls
 	// Play music with delay. 0 = No delay
 	public void PlayMusic(string musicName, float delay)
 	{
-		musicSource.clip = musicLibrary.GetClipFromName(musicName);
+		var clip = musicLibrary.GetClipFromName(musicName);
+		if (clip == null) {
+			Debug.LogWarning($"Music clip '{musicName}' not found.");
+			return;
+		}
+		musicSource.clip = clip;
 		musicSource.PlayDelayed(delay);
 	}
 
@@ -135,7 +141,12 @@ public class AudioManager : MonoBehaviour
 		float targetVolume = musicSource.volume;
 		float currentTime = 0;
 
-		musicSource.clip = musicLibrary.GetClipFromName(musicName);
+		var clip = musicLibrary.GetClipFromName(musicName);
+		if (clip == null) {
+			Debug.LogWarning($"Music clip '{musicName}' not found.");
+			return;
+		}
+		musicSource.clip = clip;
 		musicSource.Play();
 
 		while (currentTime < duration)
@@ -144,7 +155,6 @@ public class AudioManager : MonoBehaviour
 			musicSource.volume = Mathf.Lerp(startVolume, targetVolume, currentTime / duration);
 			yield return null;
 		}
-
 		yield break;
 	}
 
@@ -154,7 +164,7 @@ public class AudioManager : MonoBehaviour
 		musicSource.Stop();
 	}
 
-	// Stop music fade out
+	// Stop music fading out
 	public IEnumerator StopMusicFade(float duration)
 	{
 		float currentVolume = musicSource.volume;
@@ -170,14 +180,20 @@ public class AudioManager : MonoBehaviour
 		}
 		musicSource.Stop();
 		musicSource.volume = currentVolume;
-
 		yield break;
 	}
+#endregion
 
+#region Ambient controls
 	// Play ambient sound with delay 0 = No delay
 	public void PlayAmbient(string ambientName, float delay)
 	{
-		ambientSource.clip = ambientLibrary.GetClipFromName(ambientName);
+		var clip = ambientLibrary.GetClipFromName(ambientName);
+		if (clip == null) {
+			Debug.LogWarning($"ambient clip '{ambientName}' not found.");
+			return;
+		}
+		ambientSource.clip = clip;
 		ambientSource.PlayDelayed(delay);
 	}
 
@@ -187,7 +203,12 @@ public class AudioManager : MonoBehaviour
 		float targetVolume = ambientSource.volume;
 		float currentTime = 0;
 
-		ambientSource.clip = ambientLibrary.GetClipFromName(ambientName);
+		var clip = ambientLibrary.GetClipFromName(ambientName);
+		if (clip == null) {
+			Debug.LogWarning($"ambient clip '{ambientName}' not found.");
+			return;
+		}
+		ambientSource.clip = clip;
 		ambientSource.Play();
 
 		while (currentTime < duration)
@@ -196,8 +217,57 @@ public class AudioManager : MonoBehaviour
 			ambientSource.volume = Mathf.Lerp(startVolume, targetVolume, currentTime / duration);
 			yield return null;
 		}
-
 		yield break;
+	}
+
+	// Stop ambient sound fading out
+	public IEnumerator StopAmbientFade(float duration)
+	{
+		float currentVolume = ambientSource.volume;
+		float startVolume = ambientSource.volume;
+		float targetVolume = 0;
+		float currentTime = 0;
+
+		while (currentTime < duration)
+		{
+			currentTime += Time.deltaTime;
+			ambientSource.volume = Mathf.Lerp(startVolume, targetVolume, currentTime / duration);
+			yield return null;
+		}
+
+		ambientSource.Stop();
+		ambientSource.volume = currentVolume; // Reset volume for next playback
+		yield break;
+	}
+
+	// Crossfade ambient sound
+	public IEnumerator CrossfadeAmbient(string newClipName, float duration)
+	{
+		AudioClip newClip = ambientLibrary.GetClipFromName(newClipName);
+		if (newClip == null) yield break;
+
+		AudioSource tempSource = gameObject.AddComponent<AudioSource>();
+		tempSource.clip = newClip;
+		tempSource.outputAudioMixerGroup = ambientGroup;
+		tempSource.loop = AmbientIsLooping;
+		tempSource.volume = 0;
+		tempSource.Play();
+
+		float time = 0;
+		float startVolume = ambientSource.volume;
+
+		while (time < duration)
+		{
+			time += Time.deltaTime;
+			float t = time / duration;
+			ambientSource.volume = Mathf.Lerp(startVolume, 0, t);
+			tempSource.volume = Mathf.Lerp(0, startVolume, t);
+			yield return null;
+		}
+
+		ambientSource.Stop();
+		Destroy(ambientSource);
+		ambientSource = tempSource;
 	}
 
 	// Stop ambient sound
@@ -205,33 +275,62 @@ public class AudioManager : MonoBehaviour
 	{
 		ambientSource.Stop();
 	}
+#endregion
 
+#region Sfx Controls
 	// FX Audio
 	public void PlaySound2D(string soundName)
 	{
-		fxSource.PlayOneShot(soundLibrary.GetClipFromName(soundName), fxVolume * masterVolume);
+		var clip = soundLibrary.GetClipFromName(soundName);
+		if (clip == null) {
+			Debug.LogWarning($"Sound clip '{soundName}' not found.");
+			return;
+		}
+		fxSource.PlayOneShot(clip, fxVolume * masterVolume);
 	}
 
 	public void PlaySound3D(string soundName, Vector3 soundPosition)
 	{
-		AudioClip clip = soundLibrary.GetClipFromName(soundName);
+		var clip = soundLibrary.GetClipFromName(soundName);
+		if (clip == null) {
+			Debug.LogWarning($"Sound clip '{soundName}' not found.");
+			return;
+		}
 		fxPool.PlayClip(clip, soundPosition, fxVolume * masterVolume);
+	}
+#endregion
+
+#region Misc Methods
+	private void InitFXPool()
+	{
+		if (fxPool != null) return;
+		
+		GameObject poolObj = new("FX Pool");
+		poolObj.transform.parent = transform;
+		fxPool = poolObj.AddComponent<AudioSourcePool>();
+		fxPool.fxGroup = fxGroup;
+		fxPool.poolSize = poolSize;
 	}
 
 	// Snapshot Transitions
-	public void TransitionToSnapshot(string snapshotName, float transitionTime) {
-		switch (snapshotName) {
-			case "Default":
+	public void TransitionToSnapshot(SnapshotType snapshot, float transitionTime) 
+	{
+		switch (snapshot) 
+		{
+			case SnapshotType.Default:
 				defaultSnapshot.TransitionTo(transitionTime);
 				break;
-			case "Combat":
+			case SnapshotType.Combat:
 				combatSnapshot.TransitionTo(transitionTime);
 				break;
-			case "Stealth":
+			case SnapshotType.Stealth:
 				stealthSnapshot.TransitionTo(transitionTime);
 				break;
-			case "Underwater":
+			case SnapshotType.Underwater:
 				underwaterSnapshot.TransitionTo(transitionTime);
+				break;
+			default:
+				Debug.LogWarning($"Snapshot '{snapshotName}' not found.");
 				break;
 		}
 	}
@@ -255,4 +354,75 @@ public class AudioManager : MonoBehaviour
 		ambientSource.loop = AmbientIsLooping; // Ambient sound is looping
 		ambientSource.playOnAwake = false;
 	}
+#endregion
+
+#region Helper Methods
+	public bool MusicIsPlaying() => musicSource != null && musicSource.isPlaying;
+	public string GetCurrentMusicName() => musicSource.clip != null ? musicSource.clip.name : "None";
+
+	public bool AmbientIsPlaying() => ambientSource != null && ambientSource.isPlaying;
+	public string GetCurrentAmbientName() => ambientSource.clip != null ? ambientSource.clip.name : "None";
+
+	public SoundLibrary GetSoundLibrary() => soundLibrary;
+
+	public bool TryGetSoundNames(out string[] names)
+	{
+		if (soundLibrary == null)
+		{
+			names = null;
+			return false;
+		}
+
+		names = soundLibrary.GetAllClipNames();
+		return names != null && names.Length > 0;
+	}
+
+	public bool TryGetMusicNames(out string[] names)
+	{
+		if (musicLibrary == null)
+		{
+			names = null;
+			return false;
+		}
+
+		names = musicLibrary.GetAllClipNames();
+		return names != null && names.Length > 0;
+	}
+
+	public bool TryGetAmbientNames(out string[] names)
+	{
+		if (ambientLibrary == null)
+		{
+			names = null;
+			return false;
+		}
+
+		names = ambientLibrary.GetAllClipNames();
+		return names != null && names.Length > 0;
+	}
+
+	public float GetMixerVolumeDB(string parameter)
+	{
+		if (mainMixer.GetFloat(parameter, out float value))
+			return value;
+		return -80f; // Silence
+	}
+
+	public void SetMixerParameter(string parameterName, float value)
+	{
+		if (!mainMixer.SetFloat(parameterName, value))
+		{
+			Debug.LogWarning($"Mixer parameter '{parameterName}' not found.");
+		}
+	}
+
+	public float GetMixerParameter(string parameterName)
+	{
+		if (mainMixer.GetFloat(parameterName, out float value))
+			return value;
+
+		Debug.LogWarning($"Mixer parameter '{parameterName}' not found.");
+		return -1f;
+	}
+#endregion
 }
