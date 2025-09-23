@@ -76,6 +76,7 @@ public class SaveManager : MonoBehaviour
 #region StoryState Saving
     public void SaveStoryState(StoryState state)
     {
+        UIManager.Instance.ShowSaveIndicator();
         SaveSystem.Save(StoryStateKey, (int)state);
         Debug.Log($"Encrypted story state saved: {state}");
     }

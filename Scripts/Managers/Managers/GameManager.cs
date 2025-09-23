@@ -9,6 +9,10 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Singleton();
+    }
+
+    private void Start()
+    {
         InitializeManagers();
     }
 
@@ -53,14 +57,14 @@ public class GameManager : MonoBehaviour
     private void HandleStoryStateChange(StoryState newState)
     {
         Debug.Log($"GameManager detected story state change: {newState}");
-
         CheckpointManager.Instance.SaveCheckpoint(newState);
+        RouteStoryEvents(newState);
+    }
 
-        // Example: trigger audio or visual effects
-        // AudioManager.Instance.PlaySnapshotForState(newState);
-        // DialogueManager.Instance.TriggerDialogueForState(newState);
-        // EnvironmentManager.Instance.UnlockAreaForState(newState);
-        // UIManager.Instance.ShowObjectiveForState(newState);
-        // EnemyAIManager.Instance.ActivateBehaviorForState(newState);
+    private void RouteStoryEvents(StoryState state) 
+    {
+        // AudioManager.Instance?.PlaySnapshotForState(state);
+        // DialogueManager.Instance?.TriggerDialogueForState(state);
+        // EnvironmentManager.Instance?.UnlockAreaForState(state);
     }
 }
