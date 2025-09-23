@@ -40,6 +40,8 @@ namespace Snog.Player.PlayerMovement
             // get camera input and update its rotation
             var cameraInput = new CameraInput { Look = input.Look.ReadValue<Vector2>() };
             playerCamera.UpdateRotation(cameraInput);
+
+            // get the info if crouch is toggle of hold
             var isCrouchToggle = playerCharacter.GetIsCrouchToggle();
 
             if (isCrouchToggle)
@@ -48,11 +50,12 @@ namespace Snog.Player.PlayerMovement
                 // get the character input and update it
                 var characterInput = new CharacterInput
                 {
-                    Rotation = playerCamera.transform.rotation,
-                    Move = input.Move.ReadValue<Vector2>(),
-                    Jump = input.Jump.WasPerformedThisFrame(),
+                    Rotation    = cameraFollow.transform.rotation,
+                    Move        = input.Move.ReadValue<Vector2>(),
+                    Jump        = input.Jump.WasPerformedThisFrame(),
                     JumpSustain = input.Jump.IsPressed(),
-                    Crouch = input.Crouch.WasPerformedThisFrame()
+                    Sprint      = input.Sprint.IsPressed(),
+                    Crouch      = input.Crouch.WasPerformedThisFrame()
                         ? CrouchInput.Toggle
                         : CrouchInput.None
                 };
@@ -63,11 +66,12 @@ namespace Snog.Player.PlayerMovement
                 // get the character input and update it
                 var characterInput = new CharacterInput
                 {
-                    Rotation = playerCamera.transform.rotation,
-                    Move = input.Move.ReadValue<Vector2>(),
-                    Jump = input.Jump.WasPerformedThisFrame(),
+                    Rotation    = cameraFollow.transform.rotation,
+                    Move        = input.Move.ReadValue<Vector2>(),
+                    Jump        = input.Jump.WasPerformedThisFrame(),
                     JumpSustain = input.Jump.IsPressed(),
-                    Crouch = input.Crouch.IsPressed()
+                    Sprint      = input.Sprint.IsPressed(),
+                    Crouch      = input.Crouch.IsPressed()
                         ? CrouchInput.Crouch
                         : CrouchInput.Uncrouch
                 };

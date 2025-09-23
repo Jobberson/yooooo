@@ -1,3 +1,4 @@
+using System;
 using AwesomeAttributes;
 using KinematicCharacterController;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace Snog.Player.PlayerMovement
 
     public enum Stance
     {
-        Stand, Crouch, Slide
+        Stand, Crouch, Slide, Sprint
     }
 
     public struct CharacterState
@@ -29,6 +30,7 @@ namespace Snog.Player.PlayerMovement
         public bool Jump;
         public bool JumpSustain;
         public CrouchInput Crouch;
+        public bool Sprint;
     }
 
     public class PlayerCharacter : MonoBehaviour, ICharacterController
@@ -41,18 +43,24 @@ namespace Snog.Player.PlayerMovement
 
         [Space]
 
-        [Title("Movement", "Toggles", true, true)]
+        [Title("Movement", "Walk", true, true)]
         public bool canMove = true;
-        public bool canCrouch = true;
-        [SerializeField] private bool isCrouchToggle = true;
-        [Space]
-
-        [Title(null, "Walk", true, true)]
         [SerializeField] private float walkSpeed = 20f;
         [SerializeField] private float walkResponse = 25f;
-        [Space]
+
+        [Header("Sprinting")]
+        [SerializeField] private bool canSprint = true;
+        [SerializeField] private float sprintSpeed = 8f;
+        [SerializeField] private float sprintResponse = 25f;
+        [SerializeField] private float maxStamina = 100f;
+        [SerializeField][Tooltip("Stamina per second while sprinting")] private float sprintStaminaDrain = 20f;
+        [SerializeField][Tooltip("Stamina per second when not sprinting")] private float staminaRegenRate = 10f;
+        [Readonly][SerializeField] private float currentStamina;
+        [Readonly][SerializeField] private bool isExhausted;
 
         [Title(null, "Crouch", true, true)]
+        public bool canCrouch = true;
+        [SerializeField] private bool isCrouchToggle = true;
         [SerializeField] private float crouchSpeed = 7f;
         [SerializeField] private float crouchResponse = 20f;
         [Space]
@@ -103,6 +111,7 @@ namespace Snog.Player.PlayerMovement
         private Vector3 _requestedMovement;
         private bool _requestedJump;
         private bool _requestedSustainedJump;
+        private bool _requestedSprint;
         private bool _requestedCrouch;
         private bool _requestedCrouchInAir;
         private float _timeSinceUngrounded;
@@ -118,6 +127,8 @@ namespace Snog.Player.PlayerMovement
             _uncrouchOverlapResults = new Collider[8];
 
             motor.CharacterController = this;
+
+            currentStamina = maxStamina;
         }
         
         public void UpdateInput(CharacterInput input)
@@ -135,6 +146,9 @@ namespace Snog.Player.PlayerMovement
                 // orient the input so it's relative to the direction the player is facing
                 _requestedMovement = input.Rotation * _requestedMovement;
             }
+
+            if(canSprint) 
+                _requestedSprint = input.Sprint;
 
             // jump input
             if (canJump)
@@ -263,17 +277,55 @@ namespace Snog.Player.PlayerMovement
                     }
                 }
 
+                // Camera FOV adjustment
+                float targetFOV = _state.Stance == Stance.Sprint ? 70f : 60f;
+                playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, 8f * deltaTime);
+
+                // ...and sprinting, use stamina 
+                if(currentStamina <= 0f)
+                {
+                    isExhausted = true;
+                    _state.Stance = Stance.Stand; // Force player to stop sprinting
+                }
+
+                if (_state.Stance == Stance.Sprint)
+                {
+                    if (currentStamina > 0.01f && !isExhausted)
+                    {
+                        currentStamina -= sprintStaminaDrain * deltaTime;
+                        currentStamina = Mathf.Max(0f, currentStamina); // Prevents negative values
+                    }
+                }
+                else
+                {
+                    currentStamina = Mathf.Min(currentStamina + staminaRegenRate * deltaTime, maxStamina);
+
+                    if (isExhausted && currentStamina >= maxStamina) // Only recover from exhaustion at full stamina
+                    {
+                        isExhausted = false;
+                    }
+                }
+
                 // ...walk
-                if (_state.Stance is Stance.Stand or Stance.Crouch)
+                if (_state.Stance is Stance.Stand or Stance.Crouch or Stance.Sprint)
                 {
                     // calculate the speed and responsiveness of movement based
                     // on the character's stance
-                    var speed = _state.Stance is Stance.Stand
-                        ? walkSpeed
-                        : crouchSpeed;
-                    var response = _state.Stance is Stance.Stand
-                        ? walkResponse
-                        : crouchResponse;
+                    var speed = _state.Stance switch
+                    {
+                        Stance.Stand => walkSpeed,
+                        Stance.Crouch => crouchSpeed,
+                        Stance.Sprint => sprintSpeed,
+                        _ => walkSpeed
+                    };
+
+                    var response = _state.Stance switch
+                    {
+                        Stance.Stand => walkResponse,
+                        Stance.Crouch => crouchResponse,
+                        Stance.Sprint => sprintResponse, 
+                        _ => walkResponse 
+                    };
 
                     // and smoothly move along the ground in that direction
                     var targetVelocity = groundedMovement * speed;
@@ -285,6 +337,11 @@ namespace Snog.Player.PlayerMovement
                     );
                     _state.Acceleration = (moveVelocity - currentVelocity) / deltaTime;
                     currentVelocity = moveVelocity;
+
+                    if(!canMove)
+                    {
+                        currentVelocity = Vector3.zero;
+                    }
                 }
                 // ...continue sliding
                 else
@@ -469,6 +526,21 @@ namespace Snog.Player.PlayerMovement
                     height: crouchHeight,
                     yOffset: crouchHeight * 0.5f
                 );
+            }
+
+            // sprint
+            if (_requestedSprint 
+                && _state.Stance == Stance.Stand 
+                && _requestedMovement.sqrMagnitude > 0f 
+                && currentStamina > 0f 
+                && !isExhausted)
+            {
+                _state.Stance = Stance.Sprint;
+            }
+            else if (_state.Stance == Stance.Sprint 
+                    && (!_requestedSprint || currentStamina <= 0f || isExhausted))
+            {
+                _state.Stance = Stance.Stand;
             }
         }
 
